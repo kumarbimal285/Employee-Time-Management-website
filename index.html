@@ -1,0 +1,1034 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Employee Time Management System</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: sidebar + workspace on wide screens; nav becomes a scrolling tab strip on phones. Timesheet feel: mono figures, ruled tables. */
+:root {
+  --bg: #f3f5f8;
+  --surface: #ffffff;
+  --surface-2: #eaeef4;
+  --fg: #14202e;
+  --muted: #5a6779;
+  --line: #d6dde8;
+  --accent: #1f4fd8;
+  --accent-ink: #ffffff;
+  --accent-soft: #e4ebff;
+  --ok: #13795b;
+  --ok-soft: #dff3ea;
+  --warn: #8a5a00;
+  --warn-soft: #fbefd0;
+  --bad: #b3261e;
+  --bad-soft: #fbe3e0;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e141c; --surface: #151d28; --surface-2: #1d2735; --fg: #e7edf5; --muted: #93a1b5;
+    --line: #2a3646; --accent: #7ca2ff; --accent-ink: #0b1730; --accent-soft: #1b2a4d;
+    --ok: #5fd4a8; --ok-soft: #12372c; --warn: #f0c15a; --warn-soft: #3a2d0c; --bad: #ff8f86; --bad-soft: #3e1a18;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e141c; --surface: #151d28; --surface-2: #1d2735; --fg: #e7edf5; --muted: #93a1b5;
+  --line: #2a3646; --accent: #7ca2ff; --accent-ink: #0b1730; --accent-soft: #1b2a4d;
+  --ok: #5fd4a8; --ok-soft: #12372c; --warn: #f0c15a; --warn-soft: #3a2d0c; --bad: #ff8f86; --bad-soft: #3e1a18;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 16px 56px;
+}
+h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -0.01em; text-wrap: balance; }
+h1 { font-size: clamp(1.6rem, 4vw, 2.2rem); line-height: 1.15; }
+h2 { font-size: 1.15rem; }
+h3 { font-size: 0.95rem; }
+p { margin: 0; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mono, .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.eyebrow { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
+
+.wrap { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+
+/* header */
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 600; }
+.brand svg { color: var(--accent); flex: none; }
+.who { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: var(--surface-2); font-size: 0.82rem; }
+
+/* buttons */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 9px 16px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--surface); cursor: pointer; font-weight: 500; line-height: 1.2;
+}
+.btn:hover { background: var(--surface-2); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.ok { color: var(--ok); border-color: var(--ok); background: transparent; }
+.btn.bad { color: var(--bad); border-color: var(--bad); background: transparent; }
+.btn.ok:hover { background: var(--ok-soft); }
+.btn.bad:hover { background: var(--bad-soft); }
+.btn.small { padding: 5px 10px; font-size: 0.85rem; }
+.btn.ghost { border-color: transparent; background: transparent; color: var(--muted); }
+.btn.ghost:hover { background: var(--surface-2); color: var(--fg); }
+.linkbtn { background: none; border: 0; padding: 0; color: var(--accent); font-weight: 500; cursor: pointer; text-align: left; }
+.linkbtn:hover { text-decoration: underline; }
+
+/* landing */
+.intro { display: flex; flex-direction: column; gap: 8px; max-width: 60ch; padding-top: 12px; }
+.intro p { color: var(--muted); }
+.roles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 16px; }
+.role { display: flex; flex-direction: column; gap: 14px; }
+.role ul { margin: 0; padding-left: 18px; color: var(--muted); display: flex; flex-direction: column; gap: 4px; }
+.role form { display: flex; flex-direction: column; gap: 14px; }
+.role .btn { align-self: flex-start; }
+.quick { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+
+/* app shell */
+.shell { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 20px; align-items: start; }
+.nav { display: flex; flex-direction: column; gap: 2px; position: sticky; top: 16px; }
+.navbtn {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  text-align: left; padding: 9px 12px; border-radius: 8px; border: 0; background: transparent;
+  color: var(--muted); cursor: pointer; font-weight: 500; white-space: nowrap;
+}
+.navbtn:hover { background: var(--surface-2); color: var(--fg); }
+.navbtn[aria-current="page"] { background: var(--accent-soft); color: var(--accent); }
+.count { background: var(--accent); color: var(--accent-ink); border-radius: 999px; padding: 0 7px; font-size: 0.75rem; font-family: var(--font-mono); }
+.main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.pagehead { display: flex; flex-direction: column; gap: 2px; }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; min-width: 0; }
+.panel > h2 + * { margin-top: 14px; }
+.panelhead { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.panelhead + * { margin-top: 14px; }
+.toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+/* forms */
+.form { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr)); gap: 14px; align-items: end; }
+.form .wide { grid-column: 1 / -1; }
+label { display: flex; flex-direction: column; gap: 5px; font-size: 0.85rem; font-weight: 500; min-width: 0; }
+input, select, textarea {
+  width: 100%; padding: 9px 11px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--bg); min-width: 0;
+}
+textarea { resize: vertical; min-height: 72px; }
+input:disabled { opacity: 0.45; }
+.check { flex-direction: row; align-items: center; gap: 8px; padding-bottom: 9px; }
+.check input { width: auto; accent-color: var(--accent); }
+.formerr { color: var(--bad); font-size: 0.85rem; min-height: 1.2em; }
+.formerr:empty { display: none; }
+.preview { font-family: var(--font-mono); padding: 9px 0; color: var(--muted); }
+.preview b { color: var(--fg); font-weight: 500; }
+.btnrow { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* stats */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr)); gap: 12px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.stat .v { font-family: var(--font-mono); font-size: 1.4rem; font-weight: 500; line-height: 1.2; }
+.stat .l { font-size: 0.82rem; color: var(--muted); }
+
+/* tables */
+.tablewrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+th { text-align: left; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); font-weight: 600; padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+tbody tr:last-child td { border-bottom: 0; }
+td.r, th.r { text-align: right; }
+td .acts { display: flex; gap: 6px; flex-wrap: wrap; }
+tr.editing td { background: var(--accent-soft); }
+
+.pill { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 0.78rem; font-weight: 600; white-space: nowrap; }
+.pill.pending { background: var(--warn-soft); color: var(--warn); }
+.pill.approved { background: var(--ok-soft); color: var(--ok); }
+.pill.denied { background: var(--bad-soft); color: var(--bad); }
+.pill.off { background: var(--surface-2); color: var(--muted); }
+.pill.shift { background: var(--accent-soft); color: var(--accent); }
+
+.empty { color: var(--muted); padding: 22px 8px; text-align: center; border: 1px dashed var(--line); border-radius: 8px; display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.filters { display: flex; gap: 6px; flex-wrap: wrap; }
+.filters .btn[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+
+/* employee profile */
+.profile { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; justify-content: space-between; }
+.profile .id { display: flex; gap: 14px; align-items: center; min-width: 0; }
+.avatar { width: 52px; height: 52px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; font-weight: 600; font-size: 1.1rem; flex: none; }
+.dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 16px; }
+.dl > div { min-width: 0; overflow-wrap: anywhere; }
+.week { display: grid; grid-template-columns: repeat(7, minmax(76px, 1fr)); gap: 4px; min-width: 560px; }
+.week .d { display: flex; flex-direction: column; gap: 2px; border: 1px solid var(--line); border-radius: 6px; padding: 7px 6px; text-align: center; font-family: var(--font-mono); font-size: 0.78rem; background: var(--bg); }
+.week .d.off, .week .d.unset { color: var(--muted); }
+.week .d.off { background: var(--surface-2); }
+.week .d.unset { border-style: dashed; }
+
+/* schedule grid */
+.sgrid { display: grid; grid-template-columns: 150px repeat(7, minmax(84px, 1fr)); gap: 4px; min-width: 780px; }
+.sgrid .h { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); font-weight: 600; padding: 4px 6px; }
+.sgrid .n { font-weight: 500; padding: 8px 6px; align-self: center; }
+.cell {
+  border: 1px solid var(--line); background: var(--bg); border-radius: 6px; padding: 7px 6px;
+  font-family: var(--font-mono); font-size: 0.78rem; cursor: pointer; text-align: center; color: var(--fg);
+}
+.cell:hover { border-color: var(--accent); }
+.cell.off { color: var(--muted); background: var(--surface-2); }
+.cell.unset { color: var(--muted); border-style: dashed; }
+
+/* schedule list */
+.day { display: grid; grid-template-columns: 130px 1fr; gap: 10px; padding: 9px 4px; border-bottom: 1px solid var(--line); align-items: center; }
+.day:last-child { border-bottom: 0; }
+.day.today { background: var(--accent-soft); border-radius: 6px; padding-inline: 10px; }
+
+/* bars */
+.bars { display: flex; flex-direction: column; gap: 10px; }
+.bar { display: grid; grid-template-columns: minmax(80px, 140px) 1fr minmax(70px, auto); gap: 10px; align-items: center; }
+.track { height: 14px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
+.fill { height: 100%; background: var(--accent); border-radius: 4px; min-width: 2px; }
+
+.note { background: var(--accent-soft); color: var(--fg); border-radius: 8px; padding: 10px 14px; display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; font-size: 0.88rem; }
+.foot { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; color: var(--muted); font-size: 0.85rem; padding-top: 4px; }
+
+#toast {
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  z-index: 20; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; width: max-content; max-width: calc(100% - 32px);
+}
+.toast { background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: 0.9rem; box-shadow: 0 6px 20px rgba(0,0,0,.22); }
+.toast.err { background: var(--bad); color: #fff; }
+
+@media (max-width: 860px) {
+  .shell { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .nav { flex-direction: row; overflow-x: auto; position: static; padding-bottom: 4px; border-bottom: 1px solid var(--line); }
+}
+@media (max-width: 640px) {
+  .rt thead { display: none; }
+  .rt, .rt tbody, .rt tr, .rt td { display: block; width: 100%; }
+  .rt tr { padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .rt tbody tr:last-child { border-bottom: 0; }
+  .rt td { border: 0; padding: 3px 0; display: flex; justify-content: space-between; gap: 12px; text-align: right; }
+  .rt td::before { content: attr(data-label); color: var(--muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; text-align: left; flex: none; padding-top: 2px; }
+  .rt td.r { text-align: right; }
+  .rt td[data-label=""]::before { display: none; }
+  .day { grid-template-columns: 1fr; gap: 2px; }
+  .bar { grid-template-columns: 1fr auto; }
+  .bar .track { grid-column: 1 / -1; grid-row: 2; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .toast { animation: rise .18s ease-out; }
+  @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+}
+</style>
+</head>
+<body>
+
+<div class="wrap" id="app"></div>
+<div id="toast" aria-live="polite"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- Date / time helpers (local time, yyyy-MM-dd and HH:mm strings like the Java version) ---------- */
+  var DAYS = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
+  var EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  var pad = function (n) { return String(n).padStart(2, '0'); };
+  var ymd = function (d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); };
+  var td = function () { return ymd(new Date()); };
+  var pd = function (s) { var p = s.split('-').map(Number); return new Date(p[0], p[1] - 1, p[2]); };
+  var addDays = function (s, n) { var d = pd(s); d.setDate(d.getDate() + n); return ymd(d); };
+  var mins = function (t) { var p = t.split(':').map(Number); return p[0] * 60 + p[1]; };
+  var minsToTime = function (m) { return pad(Math.floor(m / 60)) + ':' + pad(m % 60); };
+  var dow = function (s) { return DAYS[(pd(s).getDay() + 6) % 7]; };
+  var cap = function (s) { return s.charAt(0) + s.slice(1).toLowerCase(); };
+  var fd = function (s) { return pd(s).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); };
+  var fdy = function (s) { return pd(s).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); };
+  var fdw = function (s) { return pd(s).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }); };
+  var rng = function (a, b) { return a === b ? fdy(a) : fd(a) + ' – ' + fdy(b); };
+  var dur = function (l) { return mins(l.end) - mins(l.start); };            // whole minutes, so totals never drift
+  var fm = function (m) {                                                    // 465 -> "7 h 45 min"
+    m = Math.round(m);
+    var h = Math.floor(m / 60), r = m % 60;
+    if (!h && !r) return '0 min';
+    if (!h) return r + ' min';
+    if (!r) return h + ' h';
+    return h + ' h ' + r + ' min';
+  };
+  var lc = function (s) { return String(s).trim().toLowerCase(); };
+  var esc = function (s) {
+    return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
+  };
+  var titleCase = function (s) { return s.replace(/\b\w/g, function (c) { return c.toUpperCase(); }); };
+  var initials = function (n) { return n.split(/\s+/).filter(Boolean).slice(0, 2).map(function (w) { return w.charAt(0); }).join('').toUpperCase(); };
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+
+  /* ---------- State (stored in the viewer's browser when possible) ---------- */
+  var KEY = 'tms-web-v1';
+  function blank(sample) {
+    return { employees: [], logs: [], requests: [], schedules: {}, nextEmployeeId: 1, nextRequestId: 1, nextLogId: 1, sample: !!sample };
+  }
+  var state = blank(false);
+  var session = null;      // { role: 'hr' } or { role: 'emp', name }
+  var view = 'home';
+  var toFilter = 'ALL';
+  var revFilter = '';
+  var editingLog = null;
+  var empState = { mode: 'list', id: null, q: '' };
+  var schedPrefill = null;
+
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* in-memory only */ } }
+
+  function newEmp(o) {
+    return {
+      id: state.nextEmployeeId++, name: o.name, department: o.department || '', title: o.title || '',
+      email: o.email || '', phone: o.phone || '', joined: o.joined || '', notes: o.notes || ''
+    };
+  }
+  function migrate() {
+    // Older saves had no employee list: build it from the names already on record.
+    if (!Array.isArray(state.employees)) {
+      state.employees = [];
+      state.nextEmployeeId = 1;
+      var seen = {}, names = [];
+      state.logs.forEach(function (l) { names.push(l.employee); });
+      state.requests.forEach(function (r) { names.push(r.employee); });
+      Object.keys(state.schedules).forEach(function (k) { names.push(titleCase(k)); });
+      names.forEach(function (n) { if (!seen[lc(n)]) { seen[lc(n)] = 1; state.employees.push(newEmp({ name: n })); } });
+      save();
+    }
+    if (!state.nextEmployeeId) state.nextEmployeeId = state.employees.reduce(function (m, e) { return Math.max(m, e.id); }, 0) + 1;
+  }
+  function load() {
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (raw) {
+        var s = JSON.parse(raw);
+        if (s && Array.isArray(s.logs) && Array.isArray(s.requests) && s.schedules) { state = s; migrate(); return true; }
+      }
+    } catch (e) { /* ignore */ }
+    return false;
+  }
+
+  function addLog(emp, date, start, end) {
+    state.logs.push({ id: state.nextLogId++, employee: emp, date: date, start: start, end: end });
+  }
+  function addRequest(emp, from, to, reason, status) {
+    var r = { id: state.nextRequestId++, employee: emp, from: from, to: to, reason: reason, status: status || 'PENDING' };
+    state.requests.push(r);
+    return r;
+  }
+
+  function seed() {
+    state = blank(true);
+    var T = td();
+    var people = [
+      { name: 'Aisha Khan', department: 'Engineering', title: 'Software Engineer', email: 'aisha.khan@example.com', phone: '+91 90000 00001', joined: addDays(T, -620), notes: 'Works on the payments service.', s: '09:00', e: '17:30' },
+      { name: 'Rohan Mehta', department: 'Design', title: 'Product Designer', email: 'rohan.mehta@example.com', phone: '+91 90000 00002', joined: addDays(T, -310), notes: '', s: '10:00', e: '18:00' },
+      { name: 'Meera Iyer', department: 'Operations', title: 'Operations Lead', email: 'meera.iyer@example.com', phone: '+91 90000 00003', joined: addDays(T, -1040), notes: 'Part time on Wednesdays.', s: '08:30', e: '16:30' }
+    ];
+    people.forEach(function (p) { state.employees.push(newEmp(p)); });
+    for (var i = 14; i >= 1; i--) {
+      var d = addDays(T, -i), w = dow(d);
+      if (w === 'SATURDAY' || w === 'SUNDAY') continue;
+      people.forEach(function (p, pi) {
+        if (w === 'WEDNESDAY' && pi === 2) return;
+        var trim = ((i * 7 + pi * 3) % 4) * 15;
+        addLog(p.name, d, p.s, minsToTime(mins(p.e) - trim));
+      });
+    }
+    addRequest('Rohan Mehta', addDays(T, 3), addDays(T, 4), 'Medical appointment', 'APPROVED');
+    addRequest('Aisha Khan', addDays(T, 10), addDays(T, 12), 'Family wedding', 'PENDING');
+    addRequest('Meera Iyer', addDays(T, 6), addDays(T, 6), 'Conference travel', 'DENIED');
+    addRequest('Rohan Mehta', addDays(T, 18), addDays(T, 22), 'Annual leave', 'PENDING');
+    function week(shift, extra) {
+      var o = {};
+      DAYS.forEach(function (x) { o[x] = (x === 'SATURDAY' || x === 'SUNDAY') ? 'OFF' : shift; });
+      Object.keys(extra || {}).forEach(function (k) { o[k] = extra[k]; });
+      return o;
+    }
+    state.schedules['aisha khan'] = week('09:00-17:30');
+    state.schedules['rohan mehta'] = week('10:00-18:00', { FRIDAY: '10:00-14:00' });
+    state.schedules['meera iyer'] = week('08:30-16:30', { WEDNESDAY: 'OFF' });
+    save();
+  }
+
+  /* ---------- Queries ---------- */
+  function findEmp(name) {
+    var k = lc(name);
+    for (var i = 0; i < state.employees.length; i++) if (lc(state.employees[i].name) === k) return state.employees[i];
+    return null;
+  }
+  function empById(id) {
+    for (var i = 0; i < state.employees.length; i++) if (state.employees[i].id === id) return state.employees[i];
+    return null;
+  }
+  function allNames() {
+    return state.employees.map(function (e) { return e.name; }).sort(function (a, b) { return a.localeCompare(b); });
+  }
+  function sortedEmployees() {
+    return state.employees.slice().sort(function (a, b) { return a.name.localeCompare(b.name); });
+  }
+  function weekRange() {
+    var t = td(), i = DAYS.indexOf(dow(t)), s = addDays(t, -i);
+    return [s, addDays(s, 6)];
+  }
+  function sameEmp(a, b) { return lc(a) === lc(b); }
+  function approvedCovering(name, d) {
+    return state.requests.some(function (r) { return sameEmp(r.employee, name) && r.status === 'APPROVED' && d >= r.from && d <= r.to; });
+  }
+  function entryFor(name, d) {
+    var sched = state.schedules[lc(name)];
+    var entry = (sched && sched[dow(d)]) || 'OFF';
+    if (approvedCovering(name, d)) entry = 'TIME OFF (approved)';
+    return entry;
+  }
+  function pendingCount() { return state.requests.filter(function (r) { return r.status === 'PENDING'; }).length; }
+  function minsBetween(name, from, to) {
+    return state.logs.filter(function (l) { return sameEmp(l.employee, name) && l.date >= from && l.date <= to; }).reduce(function (a, l) { return a + dur(l); }, 0);
+  }
+  function overlapLog(name, date, s, e, exceptId) {
+    return state.logs.find(function (l) {
+      return l.id !== exceptId && sameEmp(l.employee, name) && l.date === date && mins(s) < mins(l.end) && mins(e) > mins(l.start);
+    });
+  }
+  function overlapReq(name, from, to) {
+    return state.requests.find(function (r) { return sameEmp(r.employee, name) && r.status !== 'DENIED' && from <= r.to && to >= r.from; });
+  }
+  function renameEmployee(oldName, newName) {
+    state.logs.forEach(function (l) { if (sameEmp(l.employee, oldName)) l.employee = newName; });
+    state.requests.forEach(function (r) { if (sameEmp(r.employee, oldName)) r.employee = newName; });
+    var ok = lc(oldName), nk = lc(newName);
+    if (ok !== nk && state.schedules[ok]) { state.schedules[nk] = state.schedules[ok]; delete state.schedules[ok]; }
+  }
+  function deleteEmployee(id) {
+    var e = empById(id);
+    if (!e) return;
+    state.employees = state.employees.filter(function (x) { return x.id !== id; });
+    state.logs = state.logs.filter(function (l) { return !sameEmp(l.employee, e.name); });
+    state.requests = state.requests.filter(function (r) { return !sameEmp(r.employee, e.name); });
+    delete state.schedules[lc(e.name)];
+    if (revFilter && sameEmp(revFilter, e.name)) revFilter = '';
+    save();
+  }
+
+  function pill(status) { return '<span class="pill ' + status.toLowerCase() + '">' + cap(status) + '</span>'; }
+  function timeStr(t) { return '<span class="mono">' + esc(t) + '</span>'; }
+
+  /* ---------- Toast ---------- */
+  function toast(msg, isErr) {
+    var box = $('#toast'), el = document.createElement('div');
+    el.className = 'toast' + (isErr ? ' err' : '');
+    el.textContent = msg;
+    box.appendChild(el);
+    setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 3600);
+  }
+
+  /* ---------- Shared markup ---------- */
+  function brand() {
+    return '<div class="brand"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>Employee Time Management</span></div>';
+  }
+  function emptyBox(msg, btn) { return '<div class="empty"><span>' + msg + '</span>' + (btn || '') + '</div>'; }
+  function pageHead(title, sub) {
+    return '<div class="pagehead"><h1>' + esc(title) + '</h1>' + (sub ? '<p class="muted">' + esc(sub) + '</p>' : '') + '</div>';
+  }
+  function stat(v, l) { return '<div class="stat"><span class="v">' + v + '</span><span class="l">' + esc(l) + '</span></div>'; }
+  function addEmpBtn(label) { return '<button class="btn primary" data-action="emp-add">' + (label || 'Add employee') + '</button>'; }
+
+  /* ---------- Landing ---------- */
+  function landing() {
+    var emps = sortedEmployees();
+    var quick = emps.length ? '<div class="quick"><span class="muted">Employees:</span>' +
+      emps.map(function (e) { return '<button type="button" class="btn small" data-action="enter-emp-quick" data-name="' + esc(e.name) + '">' + esc(e.name) + '</button>'; }).join('') + '</div>' :
+      '<p class="muted">No employees yet. An HR manager needs to add you first.</p>';
+    return '<div class="top">' + brand() + '</div>' +
+      '<section class="intro"><h1>Track hours, time off and schedules in one place.</h1><p>Choose how you are signing in. HR managers add employees, review requests and run reports. Employees log hours, request leave and check their schedule.</p></section>' +
+      '<div class="roles">' +
+      '<section class="panel role"><div><div class="eyebrow">Manager</div><h2>HR Manager</h2></div><ul><li>Add employees and keep their details</li><li>Approve or deny time off requests</li><li>Set weekly shifts and days off</li><li>Correct logged time and run reports</li></ul><button class="btn primary" data-action="enter-hr">Open HR dashboard</button></section>' +
+      '<section class="panel role"><div><div class="eyebrow">Staff</div><h2>Employee</h2></div>' +
+      '<form data-form="enter-emp"><label>Your name<input id="empname" name="name" autocomplete="off" placeholder="e.g. Aisha Khan" required></label><button class="btn primary" type="submit">Continue</button><p class="formerr" role="alert"></p></form>' + quick + '</section>' +
+      '</div>' + footer();
+  }
+
+  function footer() {
+    return '<div class="foot"><span>' + (state.sample ? 'Showing sample data.' : 'Data is saved in this browser.') + '</span>' +
+      '<button class="btn small ghost" data-action="restore-sample" data-label="Load sample data">Load sample data</button>' +
+      '<button class="btn small ghost" data-action="clear-all" data-label="Clear all data">Clear all data</button></div>';
+  }
+
+  /* ---------- Shell ---------- */
+  var NAV = {
+    emp: [['home', 'Overview'], ['log', 'Log work hours'], ['timeoff', 'Request time off'], ['schedule', 'My schedule'], ['requests', 'My requests']],
+    hr: [['home', 'Overview'], ['employees', 'Employees'], ['timeoff', 'Time off'], ['schedules', 'Schedules'], ['review', 'Time review'], ['report', 'Reports']]
+  };
+
+  function shell() {
+    var items = NAV[session.role].map(function (n) {
+      var badge = (session.role === 'hr' && n[0] === 'timeoff' && pendingCount()) ? '<span class="count">' + pendingCount() + '</span>' : '';
+      return '<button class="navbtn" data-action="nav" data-view="' + n[0] + '"' + (view === n[0] ? ' aria-current="page"' : '') + '>' + n[1] + badge + '</button>';
+    }).join('');
+    var who = session.role === 'hr' ? 'HR Manager' : esc(session.name);
+    var banner = state.sample ? '<div class="note"><span>Sample data is loaded so you can explore. Changes you make are saved in this browser.</span><button class="btn small" data-action="clear-all" data-label="Start fresh">Start fresh</button></div>' : '';
+    return '<div class="top">' + brand() + '<div class="who"><span class="chip">' + who + '</span><button class="btn small" data-action="switch">Switch role</button></div></div>' + banner +
+      '<div class="shell"><nav class="nav" aria-label="Sections">' + items + '</nav><main class="main" id="main">' + currentView() + '</main></div>';
+  }
+
+  function currentView() {
+    var v = VIEWS[session.role][view] || VIEWS[session.role].home;
+    return v();
+  }
+
+  /* ---------- Employee views ---------- */
+  function myLogs() { return state.logs.filter(function (l) { return sameEmp(l.employee, session.name); }); }
+  function myRequests() { return state.requests.filter(function (r) { return sameEmp(r.employee, session.name); }); }
+
+  function empHome() {
+    var wk = weekRange(), T = td();
+    var wkMins = minsBetween(session.name, wk[0], wk[1]);
+    var pend = myRequests().filter(function (r) { return r.status === 'PENDING'; }).length;
+    var next = null;
+    if (state.schedules[lc(session.name)]) {
+      for (var i = 0; i < 21; i++) {
+        var d = addDays(T, i), e = entryFor(session.name, d);
+        if (e !== 'OFF' && e.indexOf('TIME OFF') !== 0) { next = { d: d, e: e }; break; }
+      }
+    }
+    var nextHtml = next ? '<span class="v" style="font-size:1.15rem">' + (next.d === T ? 'Today' : fdw(next.d)) + '</span><span class="l mono">' + esc(next.e.replace('-', ' – ')) + '</span>' : '<span class="v" style="font-size:1.15rem">None set</span><span class="l">Ask HR to set your schedule</span>';
+    var recent = myLogs().slice().sort(function (a, b) { return b.date.localeCompare(a.date) || b.id - a.id; }).slice(0, 5);
+    var me = findEmp(session.name);
+    var profile = me ? [me.title, me.department].filter(Boolean).join(' · ') : '';
+    return pageHead('Hello, ' + session.name, (profile ? profile + '. ' : '') + 'Here is where your week stands.') +
+      '<div class="stats">' + stat(fm(wkMins), 'Logged this week') + stat(pend, 'Requests awaiting approval') + '<div class="stat">' + nextHtml + '<span class="l">Next shift</span></div></div>' +
+      '<section class="panel"><div class="panelhead"><h2>Recent entries</h2><button class="btn small primary" data-action="nav" data-view="log">Log work hours</button></div>' + logTable(recent, false) + '</section>';
+  }
+
+  function logTable(list, showTotal) {
+    if (!list.length) return emptyBox('No hours logged yet.');
+    var total = list.reduce(function (a, l) { return a + dur(l); }, 0);
+    return '<div class="tablewrap"><table class="rt"><thead><tr><th>Date</th><th>Start</th><th>End</th><th class="r">Duration</th></tr></thead><tbody>' +
+      list.map(function (l) {
+        return '<tr><td data-label="Date">' + fdw(l.date) + '</td><td data-label="Start">' + timeStr(l.start) + '</td><td data-label="End">' + timeStr(l.end) + '</td><td class="r num" data-label="Duration">' + fm(dur(l)) + '</td></tr>';
+      }).join('') + '</tbody></table></div>' + (showTotal ? '<p class="muted" style="margin-top:10px">Total shown: <span class="mono">' + fm(total) + '</span></p>' : '');
+  }
+
+  function empLog() {
+    var recent = myLogs().slice().sort(function (a, b) { return b.date.localeCompare(a.date) || b.id - a.id; }).slice(0, 10);
+    return pageHead('Log work hours', 'Record the time you worked on a given day.') +
+      '<section class="panel"><form class="form" data-form="log"><label for="l-date">Work date<input id="l-date" type="date" name="date" value="' + td() + '" required></label>' +
+      '<label for="l-start">Start time<input id="l-start" type="time" name="start" value="09:00" required></label>' +
+      '<label for="l-end">End time<input id="l-end" type="time" name="end" value="17:00" required></label>' +
+      '<div class="preview" data-preview>Duration <b>8 h</b></div>' +
+      '<div class="wide"><button class="btn primary" type="submit">Log hours</button></div><p class="formerr wide" role="alert"></p></form></section>' +
+      '<section class="panel"><h2>Your last 10 entries</h2>' + logTable(recent, true) + '</section>';
+  }
+
+  function empTimeoff() {
+    var T = td();
+    return pageHead('Request time off', 'HR will review your request. You can follow its status under My requests.') +
+      '<section class="panel"><form class="form" data-form="timeoff"><label for="t-from">From date<input id="t-from" type="date" name="from" value="' + T + '" required></label>' +
+      '<label for="t-to">To date<input id="t-to" type="date" name="to" value="' + T + '" required></label>' +
+      '<label class="wide" for="t-reason">Reason<input id="t-reason" name="reason" autocomplete="off" placeholder="e.g. Family event"></label>' +
+      '<div class="wide"><button class="btn primary" type="submit">Submit request</button></div><p class="formerr wide" role="alert"></p></form></section>';
+  }
+
+  function requestsTable(list, withEmp, withActions) {
+    if (!list.length) return emptyBox('No requests found.');
+    return '<div class="tablewrap"><table class="rt"><thead><tr><th>ID</th>' + (withEmp ? '<th>Employee</th>' : '') + '<th>Dates</th><th>Reason</th><th>Status</th>' + (withActions ? '<th></th>' : '') + '</tr></thead><tbody>' +
+      list.map(function (r) {
+        var acts = '';
+        if (withActions) {
+          acts = '<td data-label=""><div class="acts">' +
+            (r.status !== 'APPROVED' ? '<button class="btn small ok" data-action="decide" data-id="' + r.id + '" data-status="APPROVED">Approve</button>' : '') +
+            (r.status !== 'DENIED' ? '<button class="btn small bad" data-action="decide" data-id="' + r.id + '" data-status="DENIED">Deny</button>' : '') + '</div></td>';
+        }
+        return '<tr><td class="mono" data-label="ID">#' + r.id + '</td>' + (withEmp ? '<td data-label="Employee">' + esc(r.employee) + '</td>' : '') +
+          '<td data-label="Dates">' + rng(r.from, r.to) + '</td><td data-label="Reason">' + (r.reason ? esc(r.reason) : '<span class="muted">—</span>') + '</td><td data-label="Status">' + pill(r.status) + '</td>' + acts + '</tr>';
+      }).join('') + '</tbody></table></div>';
+  }
+
+  function empRequests() {
+    var list = myRequests().slice().sort(function (a, b) { return b.id - a.id; });
+    return pageHead('My requests', 'Every time off request you have submitted.') +
+      '<section class="panel"><div class="panelhead"><h2>Requests</h2><button class="btn small primary" data-action="nav" data-view="timeoff">New request</button></div>' + requestsTable(list, false, false) + '</section>';
+  }
+
+  function scheduleOut(name, from, to) {
+    if (!state.schedules[lc(name)]) return emptyBox('No schedule set for ' + esc(name) + '. Ask your HR manager to set one.');
+    if (!from || !to) return emptyBox('Choose a start and end date.');
+    if (to < from) return '<p class="formerr">The end date cannot be before the start date.</p>';
+    if (pd(to) - pd(from) > 366 * 864e5) return '<p class="formerr">Choose a range of one year or less.</p>';
+    var out = '', T = td();
+    for (var d = from; d <= to; d = addDays(d, 1)) {
+      var e = entryFor(name, d), cls, body;
+      if (e === 'OFF') { cls = 'off'; body = 'Day off'; }
+      else if (e.indexOf('TIME OFF') === 0) { cls = 'approved'; body = 'Time off (approved)'; }
+      else { cls = 'shift'; body = e.replace('-', ' – '); }
+      out += '<div class="day' + (d === T ? ' today' : '') + '"><span>' + fdw(d) + '</span><span><span class="pill ' + cls + '">' + (cls === 'shift' ? '<span class="mono">' + body + '</span>' : body) + '</span></span></div>';
+    }
+    return out;
+  }
+
+  function empSchedule() {
+    var from = td(), to = addDays(from, 13);
+    return pageHead('My schedule', 'Your shifts for any date range. Approved time off replaces the shift.') +
+      '<section class="panel"><form class="form" data-form="sched"><label for="s-from">From date<input id="s-from" type="date" name="from" value="' + from + '"></label>' +
+      '<label for="s-to">To date<input id="s-to" type="date" name="to" value="' + to + '"></label></form>' +
+      '<div id="schedout" style="margin-top:14px">' + scheduleOut(session.name, from, to) + '</div></section>';
+  }
+
+  /* ---------- HR views ---------- */
+  function hrHome() {
+    var wk = weekRange();
+    var wkMins = state.logs.filter(function (l) { return l.date >= wk[0] && l.date <= wk[1]; }).reduce(function (a, l) { return a + dur(l); }, 0);
+    var pend = state.requests.filter(function (r) { return r.status === 'PENDING'; });
+    var scheduled = state.employees.filter(function (e) { return state.schedules[lc(e.name)]; }).length;
+    var body = state.employees.length ? '' : '<section class="panel">' + emptyBox('No employees yet. Add your first employee to start tracking time.', addEmpBtn()) + '</section>';
+    return pageHead('HR overview', 'What needs your attention today.') + body +
+      '<div class="stats">' + stat(pend.length, 'Requests to review') + stat(fm(wkMins), 'Logged this week') + stat(state.employees.length, 'Employees') + stat(scheduled, 'With a schedule') + '</div>' +
+      '<section class="panel"><div class="panelhead"><h2>Waiting for a decision</h2><button class="btn small" data-action="nav" data-view="timeoff">All requests</button></div>' + (pend.length ? requestsTable(pend.slice(0, 6), true, true) : emptyBox('Nothing pending. You are all caught up.')) + '</section>';
+  }
+
+  /* Employees */
+  function hrEmployees() {
+    var m = empState.mode, e = empState.id ? empById(empState.id) : null;
+    if (m === 'add') return empForm(null);
+    if (m === 'edit' && e) return empForm(e);
+    if (m === 'detail' && e) return empDetail(e);
+    return empList();
+  }
+
+  function empRows(q) {
+    var k = lc(q || '');
+    var list = sortedEmployees().filter(function (e) {
+      return !k || (e.name + ' ' + e.department + ' ' + e.title).toLowerCase().indexOf(k) !== -1;
+    });
+    if (!state.employees.length) return emptyBox('No employees yet. Add your first employee to get started.', addEmpBtn());
+    if (!list.length) return emptyBox('No employee matches "' + esc(q) + '".');
+    var wk = weekRange();
+    return '<div class="tablewrap"><table class="rt"><thead><tr><th>Employee</th><th>Department</th><th>Job title</th><th>Email</th><th class="r">This week</th></tr></thead><tbody>' +
+      list.map(function (e) {
+        var dash = '<span class="muted">—</span>';
+        return '<tr><td data-label="Employee"><button class="linkbtn" data-action="emp-open" data-id="' + e.id + '">' + esc(e.name) + '</button></td>' +
+          '<td data-label="Department">' + (e.department ? esc(e.department) : dash) + '</td><td data-label="Job title">' + (e.title ? esc(e.title) : dash) + '</td>' +
+          '<td data-label="Email">' + (e.email ? esc(e.email) : dash) + '</td><td class="r num" data-label="This week">' + fm(minsBetween(e.name, wk[0], wk[1])) + '</td></tr>';
+      }).join('') + '</tbody></table></div>';
+  }
+
+  function empList() {
+    return pageHead('Employees', 'Everyone on record. Select a name to see and edit their details.') +
+      '<section class="panel"><div class="panelhead"><h2>Directory <span class="muted mono" style="font-weight:400">(' + state.employees.length + ')</span></h2>' +
+      '<div class="toolbar"><input id="emp-q" type="search" placeholder="Search name, department or title" aria-label="Search employees" value="' + esc(empState.q) + '" style="width:270px;max-width:100%">' + addEmpBtn() + '</div></div>' +
+      '<div id="emplist">' + empRows(empState.q) + '</div></section>';
+  }
+
+  function empForm(e) {
+    var depts = {};
+    state.employees.forEach(function (x) { if (x.department) depts[x.department] = 1; });
+    var v = e || { name: '', department: '', title: '', email: '', phone: '', joined: td(), notes: '' };
+    return '<div><button class="btn small ghost" data-action="' + (e ? 'emp-open' : 'emp-list') + '" data-id="' + (e ? e.id : '') + '">← ' + (e ? 'Back to ' + esc(e.name) : 'All employees') + '</button></div>' +
+      pageHead(e ? 'Edit ' + e.name : 'Add employee', e ? 'Changing the name also updates their time logs, requests and schedule.' : 'Enter their details. You can set a weekly schedule once they are added.') +
+      '<section class="panel"><form class="form" data-form="emp-save" data-id="' + (e ? e.id : '') + '">' +
+      '<label for="e-name">Full name *<input id="e-name" name="name" required maxlength="60" autocomplete="off" value="' + esc(v.name) + '"></label>' +
+      '<label for="e-dept">Department<input id="e-dept" name="department" list="e-depts" maxlength="40" autocomplete="off" value="' + esc(v.department) + '"></label>' +
+      '<datalist id="e-depts">' + Object.keys(depts).map(function (d) { return '<option value="' + esc(d) + '">'; }).join('') + '</datalist>' +
+      '<label for="e-title">Job title<input id="e-title" name="title" maxlength="60" autocomplete="off" value="' + esc(v.title) + '"></label>' +
+      '<label for="e-email">Email<input id="e-email" name="email" type="email" maxlength="80" autocomplete="off" value="' + esc(v.email) + '"></label>' +
+      '<label for="e-phone">Phone<input id="e-phone" name="phone" type="tel" maxlength="30" autocomplete="off" value="' + esc(v.phone) + '"></label>' +
+      '<label for="e-joined">Start date<input id="e-joined" name="joined" type="date" value="' + esc(v.joined) + '"></label>' +
+      '<label class="wide" for="e-notes">Notes<textarea id="e-notes" name="notes" maxlength="400">' + esc(v.notes) + '</textarea></label>' +
+      '<div class="wide btnrow"><button class="btn primary" type="submit">' + (e ? 'Save changes' : 'Add employee') + '</button>' +
+      '<button class="btn" type="button" data-action="' + (e ? 'emp-open' : 'emp-list') + '" data-id="' + (e ? e.id : '') + '">Cancel</button></div><p class="formerr wide" role="alert"></p></form></section>';
+  }
+
+  function dlRows(rows) {
+    return '<div class="dl">' + rows.map(function (r) {
+      return '<div><div class="eyebrow">' + r[0] + '</div><div>' + (r[1] ? esc(r[1]) : '<span class="muted">Not provided</span>') + '</div></div>';
+    }).join('') + '</div>';
+  }
+
+  function empDetail(e) {
+    var T = td(), wk = weekRange();
+    var sched = state.schedules[lc(e.name)];
+    var logs = state.logs.filter(function (l) { return sameEmp(l.employee, e.name); }).sort(function (a, b) { return b.date.localeCompare(a.date) || b.id - a.id; });
+    var reqs = state.requests.filter(function (r) { return sameEmp(r.employee, e.name); }).sort(function (a, b) { return b.id - a.id; });
+    var pend = reqs.filter(function (r) { return r.status === 'PENDING'; }).length;
+    var week = DAYS.map(function (d) {
+      var v = sched ? sched[d] : undefined, cls = 'd', txt;
+      if (v === undefined) { cls += ' unset'; txt = 'not set'; }
+      else if (v === 'OFF') { cls += ' off'; txt = 'OFF'; }
+      else txt = v.replace('-', '–');
+      return '<div class="' + cls + '"><span class="eyebrow">' + d.slice(0, 3) + '</span><span>' + esc(txt) + '</span></div>';
+    }).join('');
+    return '<div><button class="btn small ghost" data-action="emp-list">← All employees</button></div>' +
+      '<section class="panel"><div class="profile"><div class="id"><div class="avatar" aria-hidden="true">' + esc(initials(e.name)) + '</div><div style="min-width:0"><h1 style="font-size:1.5rem">' + esc(e.name) + '</h1><p class="muted">' +
+      esc([e.title, e.department].filter(Boolean).join(' · ') || 'No job title or department yet') + '</p></div></div>' +
+      '<div class="btnrow"><button class="btn" data-action="emp-edit" data-id="' + e.id + '">Edit details</button><button class="btn bad" data-action="emp-delete" data-id="' + e.id + '" data-label="Delete employee">Delete employee</button></div></div>' +
+      '<p class="muted" style="margin-top:10px;font-size:0.85rem">Deleting also removes ' + logs.length + ' time log' + (logs.length === 1 ? '' : 's') + ', ' + reqs.length + ' request' + (reqs.length === 1 ? '' : 's') + (sched ? ' and the weekly schedule' : '') + '.</p></section>' +
+      '<div class="stats">' + stat(fm(minsBetween(e.name, wk[0], wk[1])), 'Logged this week') + stat(fm(minsBetween(e.name, addDays(T, -29), T)), 'Logged in last 30 days') + stat(pend, 'Requests pending') + '</div>' +
+      '<section class="panel"><h2>Details</h2>' + dlRows([['Email', e.email], ['Phone', e.phone], ['Department', e.department], ['Job title', e.title], ['Start date', e.joined ? fdy(e.joined) : ''], ['Notes', e.notes]]) + '</section>' +
+      '<section class="panel"><div class="panelhead"><h2>Weekly schedule</h2><button class="btn small" data-action="emp-sched" data-name="' + esc(e.name) + '">' + (sched ? 'Edit schedule' : 'Set schedule') + '</button></div><div class="tablewrap"><div class="week">' + week + '</div></div>' +
+      (sched ? '' : '<p class="muted" style="margin-top:10px">No schedule yet. Days that are not set count as OFF.</p>') + '</section>' +
+      '<section class="panel"><h2>Time off</h2>' + requestsTable(reqs.slice(0, 5), false, true) + '</section>' +
+      '<section class="panel"><div class="panelhead"><h2>Recent time logs</h2><button class="btn small" data-action="emp-logs" data-name="' + esc(e.name) + '">Review and correct</button></div>' + logTable(logs.slice(0, 5), false) + '</section>';
+  }
+
+  function hrTimeoff() {
+    var list = state.requests.filter(function (r) { return toFilter === 'ALL' || r.status === toFilter; }).sort(function (a, b) { return b.id - a.id; });
+    var f = ['ALL', 'PENDING', 'APPROVED', 'DENIED'].map(function (s) {
+      return '<button class="btn small" data-action="filter" data-value="' + s + '" aria-pressed="' + (toFilter === s) + '">' + cap(s) + '</button>';
+    }).join('');
+    return pageHead('Time off management', 'Approve or deny requests. You can change an earlier decision at any time.') +
+      '<section class="panel"><div class="panelhead"><h2>Requests</h2><div class="filters">' + f + '</div></div>' + requestsTable(list, true, true) + '</section>';
+  }
+
+  function hrSchedules() {
+    var emps = sortedEmployees();
+    var pre = schedPrefill; schedPrefill = null;
+    if (!emps.length) {
+      return pageHead('Schedule management', 'Set a shift or a day off for any employee and weekday.') +
+        '<section class="panel">' + emptyBox('Add an employee before setting schedules.', addEmpBtn()) + '</section>';
+    }
+    var grid = '<div class="tablewrap"><div class="sgrid"><div class="h">Employee</div>' + DAYS.map(function (d) { return '<div class="h">' + d.slice(0, 3) + '</div>'; }).join('');
+    emps.forEach(function (e) {
+      var s = state.schedules[lc(e.name)] || {};
+      grid += '<div class="n">' + esc(e.name) + '</div>';
+      DAYS.forEach(function (d) {
+        var v = s[d], cls = 'cell', txt;
+        if (v === undefined) { cls += ' unset'; txt = 'not set'; }
+        else if (v === 'OFF') { cls += ' off'; txt = 'OFF'; }
+        else { txt = v.replace('-', '–'); }
+        grid += '<button class="' + cls + '" data-action="pick" data-emp="' + esc(e.name) + '" data-day="' + d + '" title="Edit ' + esc(e.name) + ' ' + cap(d) + '">' + esc(txt) + '</button>';
+      });
+    });
+    grid += '</div></div><p class="muted" style="margin-top:10px">Days that are not set count as OFF. Select a cell to edit it.</p>';
+    return pageHead('Schedule management', 'Set a shift or a day off for any employee and weekday.') +
+      '<section class="panel"><h2>Weekly schedules</h2>' + grid + '</section>' +
+      '<section class="panel"><h2>Update a day</h2><form class="form" data-form="sched-set" id="schedform">' +
+      '<label for="ss-emp">Employee<select id="ss-emp" name="emp">' + emps.map(function (e) { return '<option value="' + esc(e.name) + '"' + (pre && sameEmp(pre, e.name) ? ' selected' : '') + '>' + esc(e.name) + '</option>'; }).join('') + '</select></label>' +
+      '<label for="ss-day">Day<select id="ss-day" name="day">' + DAYS.map(function (d) { return '<option value="' + d + '">' + cap(d) + '</option>'; }).join('') + '</select></label>' +
+      '<label class="check" for="ss-off"><input id="ss-off" type="checkbox" name="off"> Day off</label>' +
+      '<label for="ss-start">Shift start<input id="ss-start" type="time" name="start" value="09:00"></label>' +
+      '<label for="ss-end">Shift end<input id="ss-end" type="time" name="end" value="17:00"></label>' +
+      '<div class="wide"><button class="btn primary" type="submit">Save schedule</button></div><p class="formerr wide" role="alert"></p></form></section>';
+  }
+
+  function hrReview() {
+    var names = allNames();
+    var list = state.logs.filter(function (l) { return !revFilter || sameEmp(l.employee, revFilter); })
+      .sort(function (a, b) { return b.date.localeCompare(a.date) || a.employee.localeCompare(b.employee) || mins(b.start) - mins(a.start); });
+    var body;
+    if (!list.length) body = emptyBox('No time logs.');
+    else {
+      body = '<div class="tablewrap"><table class="rt"><thead><tr><th>Date</th><th>Employee</th><th>Start</th><th>End</th><th class="r">Duration</th><th></th></tr></thead><tbody>' +
+        list.map(function (l) {
+          if (editingLog === l.id) {
+            return '<tr class="editing"><td data-label="Date">' + fdw(l.date) + '</td><td data-label="Employee">' + esc(l.employee) + '</td>' +
+              '<td data-label="Start"><input type="time" id="ed-start" value="' + l.start + '" aria-label="New start time"></td>' +
+              '<td data-label="End"><input type="time" id="ed-end" value="' + l.end + '" aria-label="New end time"></td><td class="r num" data-label="Duration">' + fm(dur(l)) + '</td>' +
+              '<td data-label=""><div class="acts"><button class="btn small primary" data-action="save-log" data-id="' + l.id + '">Save</button><button class="btn small" data-action="cancel-edit">Cancel</button></div></td></tr>';
+          }
+          return '<tr><td data-label="Date">' + fdw(l.date) + '</td><td data-label="Employee">' + esc(l.employee) + '</td><td data-label="Start">' + timeStr(l.start) + '</td><td data-label="End">' + timeStr(l.end) + '</td><td class="r num" data-label="Duration">' + fm(dur(l)) + '</td>' +
+            '<td data-label=""><button class="btn small" data-action="edit-log" data-id="' + l.id + '">Correct</button></td></tr>';
+        }).join('') + '</tbody></table></div>';
+    }
+    return pageHead('Time tracking review', 'Correct the start or end time on any entry.') +
+      '<section class="panel"><div class="panelhead"><h2>Time logs</h2><label for="rv-emp" style="flex-direction:row;align-items:center;gap:8px">Employee<select id="rv-emp" data-action-change="rev-filter" style="width:auto"><option value="">All employees</option>' +
+      names.map(function (n) { return '<option value="' + esc(n) + '"' + (lc(n) === lc(revFilter) ? ' selected' : '') + '>' + esc(n) + '</option>'; }).join('') + '</select></label></div>' + body + '</section>';
+  }
+
+  function hrReport() {
+    var names = allNames();
+    var to = td(), from = addDays(to, -30);
+    return pageHead('Reports', 'Time worked and time off for a date range.') +
+      '<section class="panel"><form class="form" data-form="report"><label for="r-emp">Employee<select id="r-emp" name="emp"><option value="">All employees</option>' +
+      names.map(function (n) { return '<option value="' + esc(n) + '">' + esc(n) + '</option>'; }).join('') + '</select></label>' +
+      '<label for="r-from">From date<input id="r-from" type="date" name="from" value="' + from + '"></label>' +
+      '<label for="r-to">To date<input id="r-to" type="date" name="to" value="' + to + '"></label>' +
+      '<div><button type="button" class="btn" data-action="copy-report">Copy as text</button></div></form></section>' +
+      '<div id="reportout" class="main">' + reportOut('', from, to).html + '</div>';
+  }
+
+  function reportData(emp, from, to) {
+    var logs = state.logs.filter(function (l) { return (!emp || sameEmp(l.employee, emp)) && l.date >= from && l.date <= to; })
+      .sort(function (a, b) { return a.date.localeCompare(b.date) || a.employee.localeCompare(b.employee); });
+    var total = logs.reduce(function (a, l) { return a + dur(l); }, 0);
+    var reqs = state.requests.filter(function (r) { return (!emp || sameEmp(r.employee, emp)) && r.to >= from && r.from <= to; });
+    var cnt = { APPROVED: 0, DENIED: 0, PENDING: 0 };
+    reqs.forEach(function (r) { cnt[r.status]++; });
+    var per = {};
+    logs.forEach(function (l) { var k = lc(l.employee); per[k] = per[k] || { name: l.employee, m: 0 }; per[k].m += dur(l); });
+    var bars = Object.keys(per).map(function (k) { return per[k]; }).sort(function (a, b) { return b.m - a.m; });
+    return { logs: logs, total: total, reqs: reqs, cnt: cnt, bars: bars };
+  }
+
+  function reportOut(emp, from, to) {
+    if (!from || !to) return { html: emptyBox('Choose a start and end date.') };
+    if (to < from) return { html: '<p class="formerr">The end date cannot be before the start date.</p>' };
+    var d = reportData(emp, from, to);
+    var max = d.bars.length ? d.bars[0].m : 1;
+    var chart = d.bars.length ? '<div class="bars">' + d.bars.map(function (b) {
+      return '<div class="bar"><span>' + esc(b.name) + '</span><div class="track"><div class="fill" style="width:' + (b.m / max * 100).toFixed(1) + '%"></div></div><span class="num" style="text-align:right">' + fm(b.m) + '</span></div>';
+    }).join('') + '</div>' : emptyBox('No data for this range.');
+    var logTbl = d.logs.length ? '<div class="tablewrap"><table class="rt"><thead><tr><th>Date</th><th>Employee</th><th>Start</th><th>End</th><th class="r">Duration</th></tr></thead><tbody>' +
+      d.logs.map(function (l) { return '<tr><td data-label="Date">' + fdw(l.date) + '</td><td data-label="Employee">' + esc(l.employee) + '</td><td data-label="Start">' + timeStr(l.start) + '</td><td data-label="End">' + timeStr(l.end) + '</td><td class="r num" data-label="Duration">' + fm(dur(l)) + '</td></tr>'; }).join('') + '</tbody></table></div>' : emptyBox('No time logs in this range.');
+    var html = '<div class="stats">' + stat(fm(d.total), 'Total time worked') + stat(d.cnt.APPROVED, 'Approved requests') + stat(d.cnt.DENIED, 'Denied requests') + stat(d.cnt.PENDING, 'Pending requests') + '</div>' +
+      '<section class="panel"><h2>Time per employee</h2>' + chart + '</section>' +
+      '<section class="panel"><h2>Time logs</h2>' + logTbl + '</section>' +
+      '<section class="panel"><h2>Time off</h2>' + requestsTable(d.reqs, true, false) + '</section>';
+    return { html: html };
+  }
+
+  function reportText() {
+    var f = $('[data-form="report"]');
+    if (!f) return '';
+    var emp = f.elements.emp.value, from = f.elements.from.value, to = f.elements.to.value;
+    if (!from || !to || to < from) return '';
+    var d = reportData(emp, from, to), t = [];
+    t.push('===== REPORT: ' + (emp || 'All employees') + ' | ' + from + ' to ' + to + ' =====', '', 'Time logs:');
+    d.logs.forEach(function (l) { t.push(l.employee + ' | ' + l.date + ' | ' + l.start + ' - ' + l.end + ' | ' + fm(dur(l))); });
+    t.push('Total time: ' + fm(d.total), '', 'Time off:');
+    d.reqs.forEach(function (r) { t.push('#' + r.id + ' | ' + r.employee + ' | ' + r.from + ' to ' + r.to + ' | ' + r.reason + ' | ' + r.status); });
+    t.push('Approved: ' + d.cnt.APPROVED + ' | Denied: ' + d.cnt.DENIED + ' | Pending: ' + d.cnt.PENDING, '', 'Time per employee:');
+    if (!d.bars.length) t.push('(no data)');
+    d.bars.forEach(function (b) { t.push(b.name + ': ' + fm(b.m)); });
+    return t.join('\n');
+  }
+
+  var VIEWS = {
+    emp: { home: empHome, log: empLog, timeoff: empTimeoff, schedule: empSchedule, requests: empRequests },
+    hr: { home: hrHome, employees: hrEmployees, timeoff: hrTimeoff, schedules: hrSchedules, review: hrReview, report: hrReport }
+  };
+
+  /* ---------- Rendering ---------- */
+  function render() {
+    // An employee who no longer exists (data cleared or deleted) returns to the start screen.
+    if (session && session.role === 'emp') {
+      var me = findEmp(session.name);
+      if (me) session.name = me.name; else session = null;
+    }
+    $('#app').innerHTML = session ? shell() : landing();
+  }
+  function go(v) { view = v; editingLog = null; render(); window.scrollTo(0, 0); }
+  function setErr(form, msg) { var e = $('.formerr', form); if (e) e.textContent = msg || ''; }
+
+  /* ---------- Events ---------- */
+  function armed(btn, fn) {
+    if (btn.dataset.armed) { fn(); return; }
+    btn.dataset.armed = '1';
+    btn.textContent = 'Click again to confirm';
+    setTimeout(function () { if (btn.isConnected) { delete btn.dataset.armed; btn.textContent = btn.dataset.label || 'Confirm'; } }, 4000);
+  }
+
+  function showEmp(mode, id) {
+    view = 'employees';
+    empState = { mode: mode, id: id || null, q: empState.q };
+    render();
+    window.scrollTo(0, 0);
+  }
+
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-action]');
+    if (!t) return;
+    var a = t.dataset.action;
+    if (a === 'enter-hr') { session = { role: 'hr' }; go('home'); }
+    else if (a === 'enter-emp-quick') { session = { role: 'emp', name: t.dataset.name }; go('home'); }
+    else if (a === 'switch') { session = null; render(); }
+    else if (a === 'nav') {
+      if (t.dataset.view === 'employees') empState = { mode: 'list', id: null, q: '' };
+      go(t.dataset.view);
+    }
+    else if (a === 'filter') { toFilter = t.dataset.value; render(); }
+    else if (a === 'decide') {
+      var id = Number(t.dataset.id);
+      state.requests.forEach(function (r) { if (r.id === id) r.status = t.dataset.status; });
+      save(); render();
+      toast('Request #' + id + ' ' + (t.dataset.status === 'APPROVED' ? 'approved.' : 'denied.'));
+    }
+    else if (a === 'pick') {
+      var f = $('#schedform');
+      f.elements.emp.value = t.dataset.emp;
+      f.elements.day.value = t.dataset.day;
+      var cur = (state.schedules[lc(t.dataset.emp)] || {})[t.dataset.day];
+      f.elements.off.checked = cur === 'OFF';
+      if (cur && cur !== 'OFF') { var p = cur.split('-'); f.elements.start.value = p[0]; f.elements.end.value = p[1]; }
+      syncOff(f);
+      f.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      f.elements.start.focus({ preventScroll: true });
+    }
+    else if (a === 'edit-log') { editingLog = Number(t.dataset.id); render(); }
+    else if (a === 'cancel-edit') { editingLog = null; render(); }
+    else if (a === 'save-log') {
+      var s = $('#ed-start').value, en = $('#ed-end').value;
+      if (!s || !en) { toast('Enter both a start and an end time.', true); return; }
+      if (mins(en) <= mins(s)) { toast('End time must be after start time.', true); return; }
+      var lid = Number(t.dataset.id);
+      var log = state.logs.find(function (l) { return l.id === lid; });
+      var clash = log && overlapLog(log.employee, log.date, s, en, lid);
+      if (clash) { toast('That overlaps another entry on the same day (' + clash.start + ' – ' + clash.end + ').', true); return; }
+      if (log) { log.start = s; log.end = en; }
+      editingLog = null; save(); render();
+      toast('Time log corrected.');
+    }
+    else if (a === 'emp-add') { showEmp('add'); }
+    else if (a === 'emp-list') { showEmp('list'); }
+    else if (a === 'emp-open') { showEmp('detail', Number(t.dataset.id)); }
+    else if (a === 'emp-edit') { showEmp('edit', Number(t.dataset.id)); }
+    else if (a === 'emp-delete') {
+      armed(t, function () {
+        var emp = empById(Number(t.dataset.id)), nm = emp ? emp.name : 'Employee';
+        deleteEmployee(Number(t.dataset.id));
+        showEmp('list');
+        toast(nm + ' was deleted.');
+      });
+    }
+    else if (a === 'emp-sched') {
+      schedPrefill = t.dataset.name;
+      go('schedules');
+      var sf = $('#schedform');
+      if (sf) sf.scrollIntoView({ block: 'center' });
+    }
+    else if (a === 'emp-logs') { revFilter = t.dataset.name; go('review'); }
+    else if (a === 'copy-report') {
+      var txt = reportText();
+      if (!txt) { toast('Choose a valid date range first.', true); return; }
+      var ok = function () { toast('Report copied.'); };
+      var fail = function () { toast('Copy is not available here. Select the report text manually.', true); };
+      try { navigator.clipboard.writeText(txt).then(ok, fail); } catch (err) { fail(); }
+    }
+    else if (a === 'restore-sample') { armed(t, function () { seed(); view = 'home'; render(); toast('Sample data loaded.'); }); }
+    else if (a === 'clear-all') {
+      armed(t, function () {
+        state = blank(false);
+        empState = { mode: 'list', id: null, q: '' };
+        revFilter = '';
+        save(); view = 'home'; render(); toast('All data cleared.');
+      });
+    }
+  });
+
+  function syncOff(f) {
+    var off = f.elements.off.checked;
+    f.elements.start.disabled = off;
+    f.elements.end.disabled = off;
+  }
+
+  document.addEventListener('change', function (e) {
+    var t = e.target;
+    if (t.dataset.actionChange === 'rev-filter') { revFilter = t.value; editingLog = null; render(); return; }
+    var f = t.form;
+    if (f && f.dataset.form === 'sched-set' && t.name === 'off') syncOff(f);
+  });
+
+  document.addEventListener('input', function (e) {
+    var t = e.target;
+    if (t.id === 'emp-q') {
+      empState.q = t.value;
+      var box = $('#emplist');
+      if (box) box.innerHTML = empRows(t.value);
+      return;
+    }
+    var f = t.form;
+    if (!f) return;
+    var k = f.dataset.form;
+    if (k === 'log') {
+      var p = $('[data-preview]', f), s = f.elements.start.value, en = f.elements.end.value;
+      if (s && en && mins(en) > mins(s)) p.innerHTML = 'Duration <b>' + fm(mins(en) - mins(s)) + '</b>';
+      else p.innerHTML = 'End must be after start';
+    } else if (k === 'sched') {
+      $('#schedout').innerHTML = scheduleOut(session.name, f.elements.from.value, f.elements.to.value);
+    } else if (k === 'report') {
+      $('#reportout').innerHTML = reportOut(f.elements.emp.value, f.elements.from.value, f.elements.to.value).html;
+    }
+  });
+
+  document.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var f = e.target, k = f.dataset.form;
+    if (k === 'enter-emp') {
+      var found = findEmp(f.elements.name.value);
+      if (!f.elements.name.value.trim()) { setErr(f, 'Enter your name to continue.'); return; }
+      if (!found) { setErr(f, 'No employee with that name. Check the spelling or ask your HR manager to add you.'); return; }
+      session = { role: 'emp', name: found.name }; go('home');
+    } else if (k === 'log') {
+      var date = f.elements.date.value, s = f.elements.start.value, en = f.elements.end.value;
+      if (!date || !s || !en) { setErr(f, 'Fill in the date, start time and end time.'); return; }
+      if (mins(en) <= mins(s)) { setErr(f, 'End time must be after start time.'); return; }
+      var clash = overlapLog(session.name, date, s, en);
+      if (clash) { setErr(f, 'This overlaps an entry you already logged that day (' + clash.start + ' – ' + clash.end + ').'); return; }
+      addLog(session.name, date, s, en); save(); render();
+      toast('Logged ' + fm(mins(en) - mins(s)) + '.');
+    } else if (k === 'timeoff') {
+      var from = f.elements.from.value, to = f.elements.to.value;
+      if (!from || !to) { setErr(f, 'Choose both dates.'); return; }
+      if (to < from) { setErr(f, 'The "To" date cannot be before the "From" date.'); return; }
+      var dup = overlapReq(session.name, from, to);
+      if (dup) { setErr(f, 'You already have a ' + dup.status.toLowerCase() + ' request (#' + dup.id + ') for ' + rng(dup.from, dup.to) + '.'); return; }
+      var r = addRequest(session.name, from, to, f.elements.reason.value.trim());
+      save(); view = 'requests'; render();
+      toast('Request #' + r.id + ' submitted. Status: pending.');
+    } else if (k === 'sched-set') {
+      var emp = findEmp(f.elements.emp.value);
+      if (!emp) { setErr(f, 'Choose an employee. Add them under Employees first.'); return; }
+      var day = f.elements.day.value, val;
+      if (f.elements.off.checked) val = 'OFF';
+      else {
+        var ss = f.elements.start.value, se = f.elements.end.value;
+        if (!ss || !se) { setErr(f, 'Enter both shift times.'); return; }
+        if (mins(se) <= mins(ss)) { setErr(f, 'Shift end must be after start.'); return; }
+        val = ss + '-' + se;
+      }
+      var key = lc(emp.name);
+      state.schedules[key] = state.schedules[key] || {};
+      state.schedules[key][day] = val;
+      save(); schedPrefill = emp.name; render();
+      toast('Schedule updated for ' + emp.name + '.');
+    } else if (k === 'emp-save') {
+      var id = f.dataset.id ? Number(f.dataset.id) : null;
+      var name = f.elements.name.value.trim().replace(/\s+/g, ' ');
+      if (!name) { setErr(f, 'Enter the employee’s full name.'); return; }
+      var same = findEmp(name);
+      if (same && same.id !== id) { setErr(f, 'An employee named "' + same.name + '" already exists.'); return; }
+      var email = f.elements.email.value.trim();
+      if (email && !EMAIL.test(email)) { setErr(f, 'Enter a valid email address or leave it blank.'); return; }
+      var data = {
+        name: name, department: f.elements.department.value.trim(), title: f.elements.title.value.trim(), email: email,
+        phone: f.elements.phone.value.trim(), joined: f.elements.joined.value, notes: f.elements.notes.value.trim()
+      };
+      if (id) {
+        var cur = empById(id);
+        if (cur.name !== name) renameEmployee(cur.name, name);
+        Object.keys(data).forEach(function (key2) { cur[key2] = data[key2]; });
+        save(); showEmp('detail', id);
+        toast('Employee details updated.');
+      } else {
+        var ne = newEmp(data);
+        state.employees.push(ne);
+        save(); empState.q = ''; showEmp('detail', ne.id);
+        toast(ne.name + ' was added.');
+      }
+    }
+  });
+
+  /* ---------- Start ---------- */
+  if (!load()) seed();
+  render();
+})();
+</script>
+
+</body>
+</html>
